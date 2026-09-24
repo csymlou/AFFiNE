@@ -64,8 +64,8 @@ private class AuthServerException(
 
 private fun authServerException(status: Int, text: String): AuthServerException {
     val body = runCatching { JSONObject(text) }.getOrNull()
-    val code = body?.optString("code")?.takeIf { it.isNotEmpty() }
-        ?: body?.optString("name")?.takeIf { it.isNotEmpty() }
+    val code = body?.optString("name")?.takeIf { it.isNotEmpty() }
+        ?: body?.optString("code")?.takeIf { it.isNotEmpty() }
     val message = body?.optString("message")?.takeIf { it.isNotEmpty() }
         ?: "Authentication request failed with status $status"
     return AuthServerException(code, status, message)
@@ -78,6 +78,7 @@ private val permanentAuthErrors = setOf(
 
 private val publicAuthErrors = permanentAuthErrors + setOf(
     "ACCESS_TOKEN_EXPIRED", "AUTH_SESSION_TEMPORARILY_UNAVAILABLE", "TOO_MANY_REQUESTS",
+    "WRONG_SIGN_IN_CREDENTIALS", "PASSWORD_REQUIRED", "INVALID_INPUT",
 )
 private val publicInternalAuthErrors = setOf("AUTH_SESSION_EMPTY")
 

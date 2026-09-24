@@ -51,7 +51,6 @@ import {
   Framework,
   FrameworkRoot,
   getCurrentStore,
-  useLiveData,
   useService,
 } from '@toeverything/infra';
 import { OpClient } from '@toeverything/infra/op';
@@ -429,22 +428,29 @@ const AndroidCapacitorApp = CapacitorApp as typeof CapacitorApp & {
 
 const AndroidBackAdapter = () => {
   const coordinator = useService(MobileBackCoordinator);
-  const canHandle = useLiveData(coordinator.canHandle$);
 
   useEffect(() => {
+    // AFFiNE uses semantic in-app navigation rather than WebView history. Keep
+    // Capacitor's default handler disabled: it consumes Back without finishing
+    // the activity when WebView.canGoBack() is false.
     Promise.all([
-      AndroidCapacitorApp.toggleBackButtonHandler({ enabled: !canHandle }),
-      MobileBack.setEnabled({ enabled: canHandle }),
+      AndroidCapacitorApp.toggleBackButtonHandler({ enabled: false }),
+      MobileBack.setEnabled({ enabled: true }),
     ]).catch(console.error);
-  }, [canHandle]);
 
-  useEffect(() => {
     let disposed = false;
     let remove = () => {};
     MobileBack.addListener('back', event => {
       const handled = coordinator.handleInteractivePhase(event.phase);
-      if (event.phase === 'commit' && !handled) {
-        coordinator.request('system-back');
+      if (
+        event.phase === 'commit' &&
+        !handled &&
+        !coordinator.request('system-back')
+      ) {
+        // No modal or semantic destination can handle Back, so this is the app
+        // root. Move the task to background instead of finishing the activity;
+        // this keeps the WebView/React runtime warm for frequent reopen.
+        CapacitorApp.minimizeApp().catch(console.error);
       }
     })
       .then(handle => {

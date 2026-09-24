@@ -5,6 +5,7 @@ import android.content.ComponentCallbacks2
 import android.os.Bundle
 import android.view.Gravity
 import android.view.View
+import android.view.ViewGroup
 import android.webkit.WebSettings
 import androidx.activity.enableEdgeToEdge
 import androidx.coordinatorlayout.widget.CoordinatorLayout
@@ -13,6 +14,7 @@ import androidx.core.graphics.drawable.DrawableCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.updateLayoutParams
 import androidx.core.view.updateMargins
 import androidx.lifecycle.lifecycleScope
 import androidx.vectordrawable.graphics.drawable.VectorDrawableCompat
@@ -91,10 +93,18 @@ class MainActivity : BridgeActivity(), AIButtonPlugin.Callback, AFFiNEThemePlugi
         installSplashScreen()
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
-        ViewCompat.setOnApplyWindowInsetsListener(window.decorView) { v, insets ->
-            navHeight = px2dp(insets.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom)
-            ViewCompat.onApplyWindowInsets(v, insets)
+        ViewCompat.setOnApplyWindowInsetsListener(window.decorView) { _, insets ->
+            val statusBar = insets.getInsets(WindowInsetsCompat.Type.statusBars())
+            val navigationBar = insets.getInsets(WindowInsetsCompat.Type.navigationBars())
+            navHeight = px2dp(navigationBar.bottom)
+            // Padding on WebView doesn't reliably move its page viewport (notably on Huawei
+            // WebView). Move the entire native view below the status bar instead.
+            bridge.webView.updateLayoutParams<ViewGroup.MarginLayoutParams> {
+                updateMargins(top = statusBar.top)
+            }
+            insets
         }
+        ViewCompat.requestApplyInsets(window.decorView)
     }
 
     override fun load() {
@@ -119,10 +129,10 @@ class MainActivity : BridgeActivity(), AIButtonPlugin.Callback, AFFiNEThemePlugi
             isHorizontalScrollBarEnabled = false
             isVerticalScrollBarEnabled = false
             settings.apply {
-                // Debug builds may point CAP_SERVER_URL at an HTTP dev server; release builds
-                // should keep mixed content blocked.
+                // The packaged app runs at https://localhost, so HTTP self-hosted APIs are
+                // active mixed content. Allow them only in this debug build.
                 mixedContentMode = if (BuildConfig.DEBUG) {
-                    WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
+                    WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
                 } else {
                     WebSettings.MIXED_CONTENT_NEVER_ALLOW
                 }

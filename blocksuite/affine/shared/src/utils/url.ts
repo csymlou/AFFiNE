@@ -16,8 +16,6 @@ const IPV4_ADDR_REGEXP =
 
 const toURL = (str: string) => {
   try {
-    if (!URL.canParse(str)) return null;
-
     return new URL(str);
   } catch {
     return null;
