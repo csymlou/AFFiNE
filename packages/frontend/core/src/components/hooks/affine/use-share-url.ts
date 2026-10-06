@@ -160,10 +160,13 @@ export const useSharingUrl = ({ workspaceId, pageId }: UseSharingUrl) => {
           .then(success => {
             if (success) {
               notify.success({ title: t['Copied link to clipboard']() });
+            } else {
+              notify.error({ title: t['Failed to copy link to clipboard']() });
             }
           })
           .catch(err => {
             console.error(err);
+            notify.error({ title: t['Failed to copy link to clipboard']() });
           });
         track.$.sharePanel.$.copyShareLink({ type });
       } else {

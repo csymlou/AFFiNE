@@ -64,6 +64,13 @@ import { AIButton } from './plugins/ai-button';
 import { Auth } from './plugins/auth';
 import { HashCash } from './plugins/hashcash';
 import { MobileBack } from './plugins/mobile-back';
+import { installClipboardPolyfill } from './plugins/clipboard-polyfill';
+
+// Route navigator.clipboard through Android ClipboardManager before any app
+// code runs; Huawei/in-app WebViews reject the web Clipboard API.
+installClipboardPolyfill();
+
+
 import { NbStoreNativeDBApis } from './plugins/nbstore';
 import { Preview } from './plugins/preview';
 import {

@@ -22,6 +22,7 @@ import app.affine.pro.ai.AIActivity
 import app.affine.pro.plugin.AIButtonPlugin
 import app.affine.pro.plugin.AFFiNEThemePlugin
 import app.affine.pro.plugin.AuthPlugin
+import app.affine.pro.plugin.ClipboardPlugin
 import app.affine.pro.plugin.HashCashPlugin
 import app.affine.pro.plugin.NbStorePlugin
 import app.affine.pro.plugin.MobileBackPlugin
@@ -57,6 +58,7 @@ class MainActivity : BridgeActivity(), AIButtonPlugin.Callback, AFFiNEThemePlugi
                 AFFiNEThemePlugin::class.java,
                 AIButtonPlugin::class.java,
                 AuthPlugin::class.java,
+                ClipboardPlugin::class.java,
                 HashCashPlugin::class.java,
                 NbStorePlugin::class.java,
                 MobileBackPlugin::class.java,

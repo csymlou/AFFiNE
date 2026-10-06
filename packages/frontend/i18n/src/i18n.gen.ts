@@ -100,6 +100,10 @@ export function useAFFiNEI18N(): {
       */
     ["Copied link to clipboard"](): string;
     /**
+      * `Failed to copy link to clipboard`
+      */
+    ["Failed to copy link to clipboard"](): string;
+    /**
       * `Copied to clipboard`
       */
     ["Copied to clipboard"](): string;
