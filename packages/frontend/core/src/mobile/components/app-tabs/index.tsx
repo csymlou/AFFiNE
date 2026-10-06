@@ -38,6 +38,10 @@ export const AppTabs = ({
     }
   }, [globalCache, location.pathname]);
 
+  if (hidden || virtualKeyboardVisible) {
+    return null;
+  }
+
   const tab = (
     <SafeArea
       id="app-tabs"
@@ -49,8 +53,6 @@ export const AppTabs = ({
         ...assignInlineVars({
           [styles.appTabsBackground]: background,
         }),
-        visibility: hidden || virtualKeyboardVisible ? 'hidden' : 'visible',
-        pointerEvents: hidden || virtualKeyboardVisible ? 'none' : 'auto',
       }}
     >
       <ul className={styles.appTabsInner} role="tablist">

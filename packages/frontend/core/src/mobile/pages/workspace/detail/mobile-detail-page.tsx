@@ -9,6 +9,7 @@ import { PageDetailEditor } from '@affine/core/components/page-detail-editor';
 import { DetailPageWrapper } from '@affine/core/desktop/pages/workspace/detail-page/detail-page-wrapper';
 import { PageHeader } from '@affine/core/mobile/components';
 import { AIButtonService } from '@affine/core/modules/ai-button';
+import { MobileBackCoordinator } from '@affine/core/mobile/modules/back-coordinator';
 import { ServerService } from '@affine/core/modules/cloud';
 import { DocService } from '@affine/core/modules/doc';
 import { DocDisplayMetaService } from '@affine/core/modules/doc-display-meta';
@@ -68,10 +69,12 @@ const DetailPageImpl = ({
   immersive,
   chromeVisible,
   immersiveTapHandlers,
+  editing,
 }: {
   immersive: boolean;
   chromeVisible: boolean;
   immersiveTapHandlers?: ImmersiveTapHandlers;
+  editing: boolean;
 }) => {
   const {
     editorService,
@@ -210,6 +213,7 @@ const DetailPageImpl = ({
   const canEdit = useGuard('Doc_Update', doc.id);
 
   const readonly =
+    !editing ||
     !canEdit ||
     isInTrash ||
     !enableKeyboardToolbar ||
@@ -381,18 +385,31 @@ const MobileDetailPageContent = ({
   const mode = useLiveData(editor.mode$);
   const [isLandscape, setIsLandscape] = useState(getIsLandscape);
   const [chromeVisible, setChromeVisible] = useState(true);
+  const [editing, setEditing] = useState(false);
+  const backCoordinator = useService(MobileBackCoordinator);
   const tapStateRef = useRef<{
     pointerId: number;
     clientX: number;
     clientY: number;
     tappable: boolean;
   } | null>(null);
+  const editTapStateRef = useRef<{
+    pointerId: number;
+    clientX: number;
+    clientY: number;
+    timestamp: number;
+  } | null>(null);
+  const lastEditTapRef = useRef<{
+    clientX: number;
+    clientY: number;
+    timestamp: number;
+  } | null>(null);
 
   const immersive = shouldEnableEdgelessImmersive({ mode, isLandscape });
   const trackScrollTitle = shouldTrackMobileDetailPageTitleScroll(mode);
   useMobileShellTabs({
     background: cssVarV2('layer/background/primary'),
-    hidden: immersive && !chromeVisible,
+    hidden: true,
   });
 
   useEffect(() => {
@@ -450,8 +467,23 @@ const MobileDetailPageContent = ({
 
   useEffect(() => {
     setChromeVisible(!immersive);
+    setEditing(false);
     tapStateRef.current = null;
+    editTapStateRef.current = null;
+    lastEditTapRef.current = null;
   }, [immersive, pageId]);
+
+  useEffect(() => {
+    if (!editing) return;
+    const registration = backCoordinator.registerVisual({
+      interactive: false,
+      handle: () => {
+        setEditing(false);
+        return true;
+      },
+    });
+    return registration.dispose;
+  }, [backCoordinator, editing]);
 
   useEffect(() => {
     if (!immersive || !chromeVisible) {
@@ -466,6 +498,62 @@ const MobileDetailPageContent = ({
       window.clearTimeout(timeout);
     };
   }, [chromeVisible, immersive]);
+
+  const handleStartEditing = useCallback(() => {
+    setEditing(true);
+  }, []);
+
+  const editTapHandlers = useMemo<ImmersiveTapHandlers>(() => {
+    return {
+      onPointerDown: event => {
+        if (editing || immersive || event.pointerType === 'mouse') {
+          editTapStateRef.current = null;
+          return;
+        }
+        editTapStateRef.current = {
+          pointerId: event.pointerId,
+          clientX: event.clientX,
+          clientY: event.clientY,
+          timestamp: window.performance.now(),
+        };
+      },
+      onPointerUp: event => {
+        const tapState = editTapStateRef.current;
+        editTapStateRef.current = null;
+
+        if (
+          editing ||
+          immersive ||
+          !tapState ||
+          tapState.pointerId !== event.pointerId ||
+          !isTapWithinSlop(tapState, event)
+        ) {
+          return;
+        }
+
+        const now = window.performance.now();
+        const lastTap = lastEditTapRef.current;
+        if (
+          lastTap &&
+          now - lastTap.timestamp <= 360 &&
+          isTapWithinSlop(lastTap, event, 28)
+        ) {
+          lastEditTapRef.current = null;
+          handleStartEditing();
+          return;
+        }
+
+        lastEditTapRef.current = {
+          clientX: event.clientX,
+          clientY: event.clientY,
+          timestamp: now,
+        };
+      },
+      onPointerCancel: () => {
+        editTapStateRef.current = null;
+      },
+    };
+  }, [editing, handleStartEditing, immersive]);
 
   const immersiveTapHandlers = useMemo<ImmersiveTapHandlers | undefined>(() => {
     if (!immersive) {
@@ -502,6 +590,8 @@ const MobileDetailPageContent = ({
     };
   }, [immersive]);
 
+  const detailTapHandlers = immersive ? immersiveTapHandlers : editTapHandlers;
+
   return (
     <>
       {(!immersive || chromeVisible) && (
@@ -517,7 +607,8 @@ const MobileDetailPageContent = ({
       <DetailPageImpl
         immersive={immersive}
         chromeVisible={chromeVisible}
-        immersiveTapHandlers={immersiveTapHandlers}
+        immersiveTapHandlers={detailTapHandlers}
+        editing={editing}
       />
     </>
   );
