@@ -10,6 +10,7 @@ import { useEffect } from 'react';
 import { AboutGroup } from './about';
 import { AppearanceGroup } from './appearance';
 import { DevicesGroup } from './devices';
+import { EditorSettingGroup } from './editor';
 import { ExperimentalFeatureSetting } from './experimental';
 import { OthersGroup } from './others';
 import * as styles from './style.css';
@@ -30,6 +31,7 @@ const MobileSetting = () => {
       <UserUsage />
       {status === 'authenticated' ? <DevicesGroup /> : null}
       <AppearanceGroup />
+      <EditorSettingGroup />
       <AboutGroup />
       <ExperimentalFeatureSetting />
       <OthersGroup />
